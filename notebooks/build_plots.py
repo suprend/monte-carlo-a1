@@ -1,63 +1,86 @@
 #!/usr/bin/env python3
 import csv
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import sys
-import os
+from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import matplotlib
+import matplotlib.pyplot as plt
+
+matplotlib.use("Agg")
 
 S_EXACT = 0.9445171859
+DATA_DIR = Path("data")
+PLOTS_DIR = Path("plots")
+
 
 def read_csv(filename):
-    n_values = []
-    s_est = []
-    abs_err = []
-    rel_err = []
-    
-    with open(filename, 'r') as f:
+    """Load Monte Carlo results from CSV into simple lists."""
+    n_values, s_est, abs_err, rel_err = [], [], [], []
+    with open(filename, "r") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            n_values.append(int(row['N']))
-            s_est.append(float(row['S_est']))
-            abs_err.append(float(row['abs_err']))
-            rel_err.append(float(row['rel_err']))
-    
+            n_values.append(int(row["N"]))
+            s_est.append(float(row["S_est"]))
+            abs_err.append(float(row["abs_err"]))
+            rel_err.append(float(row["rel_err"]))
     return n_values, s_est, abs_err, rel_err
 
-wide_n, wide_s, wide_abs, wide_rel = read_csv('../data/results_wide.csv')
-tight_n, tight_s, tight_abs, tight_rel = read_csv('../data/results_tight.csv')
 
-plt.figure(figsize=(10, 6))
-plt.plot(wide_n, wide_s, 'b-', label='Wide', linewidth=2)
-plt.plot(tight_n, tight_s, 'r-', label='Tight', linewidth=2)
-plt.axhline(y=S_EXACT, color='g', linestyle='--', label=f'Exact ({S_EXACT:.10f})', linewidth=2)
-plt.xlabel('N (количество точек)', fontsize=12)
-plt.ylabel('Площадь', fontsize=12)
-plt.title('Зависимость площади от N', fontsize=14, fontweight='bold')
-plt.legend(fontsize=12)
-plt.grid(True, alpha=0.3)
-plt.xscale('log')
-plt.tight_layout()
-plt.savefig('../plots/area_vs_n.png', dpi=300, bbox_inches='tight')
-plt.close()
-print("Сохранён график: plots/area_vs_n.png")
+def setup_common_style(ax, title, y_label):
+    ax.set_title(title)
+    ax.set_xlabel("N (log scale)")
+    ax.set_ylabel(y_label)
+    ax.set_xscale("log")
+    ax.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.6)
+    ax.legend()
 
-plt.figure(figsize=(10, 6))
-plt.plot(wide_n, wide_rel, 'b-o', label='Wide', markersize=4, linewidth=2)
-plt.plot(tight_n, tight_rel, 'r-s', label='Tight', markersize=4, linewidth=2)
-plt.xlabel('N (количество точек)', fontsize=12)
-plt.ylabel('Относительная ошибка', fontsize=12)
-plt.title('Зависимость относительной ошибки от N', fontsize=14, fontweight='bold')
-plt.legend(fontsize=12)
-plt.grid(True, alpha=0.3)
-plt.xscale('log')
-plt.yscale('log')
-plt.tight_layout()
-plt.savefig('../plots/error_vs_n.png', dpi=300, bbox_inches='tight')
-plt.close()
-print("Сохранён график: plots/error_vs_n.png")
 
-print("\nГрафики успешно построены!")
+def generate_area_plot(wide_data, tight_data, output_path: Path):
+    fig, ax = plt.subplots(figsize=(12, 8))
+    wide_n, wide_s = wide_data
+    tight_n, tight_s = tight_data
 
+    ax.plot(wide_n, wide_s, label="Wide", color="#3465a4", linewidth=2)
+    ax.plot(tight_n, tight_s, label="Tight", color="#c83c3c", linewidth=2)
+    ax.axhline(S_EXACT, color="#0a7c0a", linestyle=":", linewidth=2, label="Exact")
+
+    setup_common_style(ax, "Area vs N", "Estimated area")
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=200)
+    plt.close(fig)
+
+
+def generate_error_plot(wide_data, tight_data, output_path: Path):
+    fig, ax = plt.subplots(figsize=(12, 8))
+    wide_n, wide_rel = wide_data
+    tight_n, tight_rel = tight_data
+
+    ax.plot(wide_n, wide_rel, label="Wide", color="#3465a4", linewidth=2)
+    ax.plot(tight_n, tight_rel, label="Tight", color="#c83c3c", linewidth=2)
+    ax.set_yscale("log")
+
+    setup_common_style(ax, "Relative error vs N", "Relative error")
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=200)
+    plt.close(fig)
+
+
+def main():
+    PLOTS_DIR.mkdir(exist_ok=True)
+    wide_n, wide_s, _, wide_rel = read_csv(DATA_DIR / "results_wide.csv")
+    tight_n, tight_s, _, tight_rel = read_csv(DATA_DIR / "results_tight.csv")
+
+    generate_area_plot(
+        (wide_n, wide_s),
+        (tight_n, tight_s),
+        PLOTS_DIR / "area_vs_n.png",
+    )
+    generate_error_plot(
+        (wide_n, wide_rel),
+        (tight_n, tight_rel),
+        PLOTS_DIR / "error_vs_n.png",
+    )
+    print("Графики сохранены в каталоге plots/")
+
+
+if __name__ == "__main__":
+    main()

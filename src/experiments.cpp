@@ -45,9 +45,12 @@ int main() {
     for (long long n = 100; n <= 100000; n += 500) {
         nValues.push_back(n);
     }
-    if (nValues.empty() || nValues.back() != 100000) {
-        nValues.push_back(100000);
+    for (long long extra : {10000LL, 50000LL, 100000LL}) {
+        if (find(nValues.begin(), nValues.end(), extra) == nValues.end()) {
+            nValues.push_back(extra);
+        }
     }
+    sort(nValues.begin(), nValues.end());
     
     ofstream wideFile("data/results_wide.csv");
     ofstream tightFile("data/results_tight.csv");
@@ -58,8 +61,9 @@ int main() {
     double wideXMin = 0.0, wideXMax = 3.12;
     double wideYMin = 0.0, wideYMax = 3.12;
     
-    double tightXMin = 1.0, tightXMax = 2.0;
-    double tightYMin = 1.0, tightYMax = 2.0;
+    const double tightMin = 2.0 - SQRT_5_2; // точные границы пересечения по осям
+    double tightXMin = tightMin, tightXMax = 2.0;
+    double tightYMin = tightMin, tightYMax = 2.0;
     
     for (long long n : nValues) {
         auto [wideS, wideM] = monteCarloWithCount(circles, n, wideXMin, wideXMax, wideYMin, wideYMax);
@@ -84,4 +88,3 @@ int main() {
     
     return 0;
 }
-
